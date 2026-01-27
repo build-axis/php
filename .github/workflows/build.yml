@@ -3,6 +3,10 @@ on:
   push:
     branches:
       - "**"
+    paths-ignore:
+      - 'README.md'
+      - '.gitignore'
+      - 'LICENSE'
 
 jobs:
   build-and-push:
