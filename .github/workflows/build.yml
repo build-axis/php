@@ -32,6 +32,9 @@ jobs:
             echo "tag=$BRANCH" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -40,4 +43,6 @@ jobs:
         with:
           context: .
           push: true
+          # Added platforms support here
+          platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ steps.vars.outputs.tag }}
