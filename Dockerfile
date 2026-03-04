@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     bash \
     liblcms2-2 \
     unzip \
+    cron \
     && rm -rf /var/lib/apt/lists/*
 
 RUN set -ex \
@@ -26,36 +27,11 @@ RUN set -ex \
     && docker-php-ext-install -j$(nproc) zip pdo_mysql intl \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-7/policy.xml || \
-       sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml \
-    && sed -i 's/rights="none" pattern="PS"/rights="read|write" pattern="PS"/g' /etc/ImageMagick-7/policy.xml || \
-       sed -i 's/rights="none" pattern="PS"/rights="read|write" pattern="PS"/g' /etc/ImageMagick-6/policy.xml \
-    && sed -i 's/rights="none" pattern="EPS"/rights="read|write" pattern="EPS"/g' /etc/ImageMagick-7/policy.xml || \
-       sed -i 's/rights="none" pattern="EPS"/rights="read|write" pattern="EPS"/g' /etc/ImageMagick-6/policy.xml \
-    && sed -i 's/rights="none" pattern="XPS"/rights="read|write" pattern="XPS"/g' /etc/ImageMagick-7/policy.xml || \
-       sed -i 's/rights="none" pattern="XPS"/rights="read|write" pattern="XPS"/g' /etc/ImageMagick-6/policy.xml \
-    && sed -i 's/rights="none" pattern="CDR"/rights="read|write" pattern="CDR"/g' /etc/ImageMagick-7/policy.xml || \
-       sed -i 's/rights="none" pattern="CDR"/rights="read|write" pattern="CDR"/g' /etc/ImageMagick-6/policy.xml \
-    && POLICY_FILE=$(find /etc/ImageMagick-* -name delegates.xml) \
-    && sed -i '/<delegatemap>/a \  <delegate decode="cdr" command="inkscape &quot;%i&quot; --export-filename=&quot;%o.svg&quot; \&amp;\&amp; mv &quot;%o.svg&quot; &quot;%o&quot;"/>' $POLICY_FILE \
-    && apt-get purge -y $PHPIZE_DEPS libmagickwand-dev \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
-
-ENV USER=php UID=1000 GID=1000
-RUN groupadd -g "$GID" "$USER" && \
-    useradd -u "$UID" -g "$USER" -m -s /bin/bash "$USER"
-
-RUN echo '* * * * * cd /usr/share/nginx && php artisan schedule:run >> /dev/null 2>&1' > /etc/cron.d/laravel-cron && \
-    chmod 0644 /etc/cron.d/laravel-cron && \
-    crontab -u "$USER" /etc/cron.d/laravel-cron
-
-RUN echo "[supervisord]\nnodaemon=true\nuser=root\n" > /etc/supervisord.conf && \
-    echo "[program:php-fpm]\ncommand=php-fpm -F\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" >> /etc/supervisord.conf && \
-    echo "[program:phpjob]\ncommand=php artisan queue:work --tries=1\nuser=php\nnumprocs=1\ndirectory=/usr/share/nginx\nautostart=true\nautorestart=true\nstdout_logfile=/dev/stdout\nstderr_logfile=/dev/stderr\n" >> /etc/supervisord.conf && \
-    echo "[program:cron]\ncommand=cron -f\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" >> /etc/supervisord.conf
-
-WORKDIR "/usr/share/nginx"
-ENTRYPOINT ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+    && POLICY_FILE=$(find /etc/ImageMagick-* -name policy.xml | head -n 1) \
+    && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' $POLICY_FILE \
+    && sed -i 's/rights="none" pattern="PS"/rights="read|write" pattern="PS"/g' $POLICY_FILE \
+    && sed -i 's/rights="none" pattern="EPS"/rights="read|write" pattern="EPS"/g' $POLICY_FILE \
+    && sed -i 's/rights="none" pattern="XPS"/rights="read|write" pattern="XPS"/g' $POLICY_FILE \
+    && sed -i 's/rights="none" pattern="CDR"/rights="read|write" pattern="CDR"/g' $POLICY_FILE \
+    && DELEGATE_FILE=$(find /etc/ImageMagick-* -name delegates.xml | head -n 1) \
+    && sed -i '/<delegatemap>/a \  <delegate decode="cdr" command="inkscape &quot;%i&quot; --export-filename=&
