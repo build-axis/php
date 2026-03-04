@@ -3,6 +3,7 @@ FROM php:8.4.8-fpm-alpine3.22
 RUN apk add --no-cache \
     ghostscript \
     imagemagick \
+    inkscape \
     libpng \
     libjpeg-turbo \
     freetype \
@@ -30,6 +31,11 @@ RUN set -ex \
     && docker-php-ext-install -j$(nproc) zip pdo_mysql intl \
     && pecl install redis \
     && docker-php-ext-enable redis \
+    # Разблокировка прав на чтение PDF, PS, EPS и CDR для ImageMagick
+    && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-7/policy.xml \
+    && sed -i 's/rights="none" pattern="PS"/rights="read|write" pattern="PS"/g' /etc/ImageMagick-7/policy.xml \
+    && sed -i 's/rights="none" pattern="EPS"/rights="read|write" pattern="EPS"/g' /etc/ImageMagick-7/policy.xml \
+    && sed -i 's/rights="none" pattern="XPS"/rights="read|write" pattern="XPS"/g' /etc/ImageMagick-7/policy.xml \
     && apk del .build-deps \
     && rm -rf /tmp/* /var/cache/apk/*
 
