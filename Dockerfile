@@ -13,8 +13,7 @@ RUN apk add --no-cache \
     supervisor \
     curl \
     bash \
-    lcms2 \
-    shared-color-profiles
+    lcms2
 
 RUN set -ex \
     && apk add --no-cache --virtual .build-deps \
