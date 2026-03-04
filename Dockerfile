@@ -31,7 +31,7 @@ RUN set -ex \
        [ -f "$f" ] && sed -i 's/rights="none" pattern="\(PDF\|PS\|EPS\|XPS\|CDR\)"/rights="read|write" pattern="\1"/g' "$f"; \
     done \
     && for f in /etc/ImageMagick-6/delegates.xml /etc/ImageMagick-7/delegates.xml; do \
-       [ -f "$f" ] && sed -i '/<delegatemap>/a \  <delegate decode="cdr" command="inkscape &quot;%i&quot; --export-filename=&quot;%o.svg&quot; \&amp;\&amp; mv &quot;%o.svg&quot; &quot;%o&quot;"/>' "$f"; \
+       [ -f "$f" ] && sed -i '/<\/delegatemap>/i \  <delegate decode="cdr" command="inkscape &quot;%i&quot; --export-filename=&quot;%o.svg&quot; \&amp;\&amp; mv &quot;%o.svg&quot; &quot;%o&quot;"/>' "$f"; \
     done \
     && apt-get purge -y $PHPIZE_DEPS libmagickwand-dev \
     && apt-get autoremove -y \
