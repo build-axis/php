@@ -1,6 +1,6 @@
 FROM php:8.4.8-fpm-bookworm
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ghostscript \
     imagemagick \
     inkscape \
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     liblcms2-2 \
     unzip \
     cron \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 RUN set -ex \
@@ -29,7 +30,7 @@ RUN set -ex \
     && docker-php-ext-enable redis \
     && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml \
     && sed -i 's/rights="none" pattern="CDR"/rights="read|write" pattern="CDR"/g' /etc/ImageMagick-6/policy.xml \
-    && sed -i '/<delegatemap>/a \  <delegate decode="cdr" command="inkscape &quot;%i&quot; --export-filename=&quot;%o.svg&quot;; mv &quot;%o.svg&quot; &quot;%o&quot;"/>' /etc/ImageMagick-6/delegates.xml \
+    && sed -i '/<delegatemap>/a \  <delegate decode="cdr" command="cp &quot;%i&quot; &quot;%i.cdr&quot;; inkscape &quot;%i.cdr&quot; --export-filename=&quot;%o.svg&quot;; mv &quot;%o.svg&quot; &quot;%o&quot;; rm -f &quot;%i.cdr&quot;"/>' /etc/ImageMagick-6/delegates.xml \
     && apt-get purge -y $PHPIZE_DEPS libmagickwand-dev \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
