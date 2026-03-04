@@ -12,7 +12,9 @@ RUN apk add --no-cache \
     openvpn \
     supervisor \
     curl \
-    bash
+    bash \
+    lcms2 \
+    shared-color-profiles
 
 RUN set -ex \
     && apk add --no-cache --virtual .build-deps \
@@ -31,11 +33,12 @@ RUN set -ex \
     && docker-php-ext-install -j$(nproc) zip pdo_mysql intl \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    # Разблокировка прав на чтение PDF, PS, EPS и CDR для ImageMagick
     && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-7/policy.xml \
     && sed -i 's/rights="none" pattern="PS"/rights="read|write" pattern="PS"/g' /etc/ImageMagick-7/policy.xml \
     && sed -i 's/rights="none" pattern="EPS"/rights="read|write" pattern="EPS"/g' /etc/ImageMagick-7/policy.xml \
     && sed -i 's/rights="none" pattern="XPS"/rights="read|write" pattern="XPS"/g' /etc/ImageMagick-7/policy.xml \
+    && sed -i 's/rights="none" pattern="CDR"/rights="read|write" pattern="CDR"/g' /etc/ImageMagick-7/policy.xml \
+    && sed -i '/<delegatemap>/a \  <delegate decode="cdr" command="inkscape &quot;%i&quot; --export-filename=&quot;%o.svg&quot;; mv &quot;%o.svg&quot; &quot;%o&quot;"/>' /etc/ImageMagick-7/delegates.xml \
     && apk del .build-deps \
     && rm -rf /tmp/* /var/cache/apk/*
 
