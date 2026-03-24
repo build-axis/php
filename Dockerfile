@@ -36,7 +36,6 @@ RUN set -ex \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-# OPcache Configuration
 RUN { \
     echo 'opcache.enable=1'; \
     echo 'opcache.enable_cli=1'; \
@@ -45,8 +44,7 @@ RUN { \
     echo 'opcache.max_accelerated_files=20000'; \
     echo 'opcache.validate_timestamps=0'; \
     echo 'opcache.save_comments=1'; \
-    echo 'opcache.fast_shutdown=1'; \
-    } > /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
+    } >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
