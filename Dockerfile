@@ -1,86 +1,61 @@
-FROM php:8.4.8-fpm-alpine3.22
+FROM php:8.4.8-fpm-bookworm
 
-RUN apk add --no-cache tzdata
-ENV TZ=Europe/Kiev
-  
-RUN apk add ghostscript
-RUN set -ex \
-    && apk add --no-cache --virtual .phpize-deps $PHPIZE_DEPS imagemagick-dev libtool \
-    && export CFLAGS="$PHP_CFLAGS" CPPFLAGS="$PHP_CPPFLAGS" LDFLAGS="$PHP_LDFLAGS" \
-    && pecl install imagick \
-    && docker-php-ext-enable imagick \
-    && apk add --no-cache --virtual .imagick-runtime-deps imagemagick \
-    && apk del .phpize-deps  
+ENV USER=php UID=1000 GID=1000
+WORKDIR "/usr/share/nginx"
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ghostscript \
+    imagemagick \
+    inkscape \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libzip-dev \
-    zip \
+    libicu-dev \
+    openvpn \
+    supervisor \
+    curl \
+    bash \
+    liblcms2-2 \
+    unzip \
+    cron \
+    $PHPIZE_DEPS \
+    libmagickwand-dev \
+    && pecl install imagick redis \
+    && docker-php-ext-enable imagick redis \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd zip
+    && docker-php-ext-install -j$(nproc) gd zip pdo_mysql intl opcache \
+    && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml \
+    && sed -i 's/rights="none" pattern="CDR"/rights="read|write" pattern="CDR"/g' /etc/ImageMagick-6/policy.xml \
+    && sed -i '/delegate.*decode="cdr"/d' /etc/ImageMagick-6/delegates.xml \
+    && sed -i '/<delegatemap>/a \  <delegate decode="cdr" command="cp &quot;%i&quot; &quot;%i.cdr&quot;; inkscape &quot;%i.cdr&quot; --export-filename=&quot;%o.svg&quot;; mv &quot;%o.svg&quot; &quot;%o&quot;; rm -f &quot;%i.cdr&quot;"/>' /etc/ImageMagick-6/delegates.xml \
+    && apt-get purge -y $PHPIZE_DEPS libmagickwand-dev \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Установка pdo_mysql и opcache
-RUN docker-php-ext-install pdo_mysql opcache
-
-RUN set -ex \
-    && apk add --no-cache --virtual .redis-deps alpine-sdk php84-dev \
-    && yes "" | pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del .redis-deps  
-
-RUN set -ex \
-    && apk add --no-cache icu \
-    && apk add --no-cache --virtual .intl-deps icu-dev $PHPIZE_DEPS \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install intl \
-    && apk del .intl-deps 
-
-# Настройка OPcache для Laravel
 RUN { \
     echo 'opcache.enable=1'; \
     echo 'opcache.enable_cli=1'; \
     echo 'opcache.memory_consumption=256'; \
     echo 'opcache.interned_strings_buffer=16'; \
     echo 'opcache.max_accelerated_files=20000'; \
-    echo 'opcache.revalidate_freq=0'; \
     echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.revalidate_freq=0'; \
     echo 'opcache.save_comments=1'; \
     echo 'opcache.fast_shutdown=1'; \
     } > /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
-RUN curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
-    && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
-    && php -r "if (hash('SHA384', file_get_contents('/tmp/composer-setup.php')) !== trim(file_get_contents('/tmp/composer-setup.sig'))) { unlink('/tmp/composer-setup.php'); echo 'Invalid installer' . PHP_EOL; exit(1); }" \
-    && php /tmp/composer-setup.php \
-    && mv composer.phar /usr/local/bin/composer \
-    && rm /tmp/composer-setup.php
+COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
-ENV USER=php
-ENV UID=1000
-ENV GID=1000
-RUN addgroup -S "$USER" --gid="$GID" && \
-    adduser \
-    -G "$USER" \
-    --disabled-password \
-    --gecos "" \
-    --home "/home/php" \
-    --ingroup "$USER" \
-    --uid "$UID" \
-    "$USER"
+RUN groupadd -g "$GID" "$USER" && \
+    useradd -u "$UID" -g "$USER" -m -s /bin/bash "$USER"
 
-RUN apk add --no-cache supervisor openvpn
+RUN echo "* * * * * root cd /usr/share/nginx && php artisan schedule:run >> /dev/null 2>&1" > /etc/cron.d/laravel-cron
 
-RUN rm -rf /tmp/* /var/cache/apk/*
+RUN printf "[supervisord]\nnodaemon=true\nuser=root\n\n\
+[program:php-fpm]\ncommand=php-fpm -F\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n\n\
+[program:phpjob]\ncommand=php artisan queue:work --tries=1\nuser=php\nnumprocs=1\ndirectory=/usr/share/nginx\nautostart=true\nautorestart=true\nstdout_logfile=/dev/stdout\nstderr_logfile=/dev/stderr\n\n\
+[program:cron]\ncommand=cron -f\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" > /etc/supervisord.conf
 
-RUN echo '* * * * * cd /usr/share/nginx && php artisan schedule:run >> /dev/null 2>&1' > /etc/crontabs/www-data
-
-RUN mv /etc/supervisord.conf /etc/supervisord.conf.back
-RUN echo -e "[supervisord]\nnodaemon=true\n" > /etc/supervisord.conf
-RUN echo -e "[program:php-fpm]\ncommand=php-fpm -F\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\nstartretries=0\n" >> /etc/supervisord.conf
-RUN echo -e "[program:phpjob]\ncommand=php artisan queue:work --tries=1\nuser=www-data\nnumprocs=1\ndirectory=/usr/share/nginx\nautostart=true\nautorestart=true\nstdout_logfile=/dev/stdout\nstderr_logfile=/dev/stderr\n" >> /etc/supervisord.conf
-RUN echo -e "[program:crond]\ncommand=crond\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\nstartretries=0\n" >> /etc/supervisord.conf
-
-WORKDIR "/usr/share/nginx"
 ENTRYPOINT ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
