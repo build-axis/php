@@ -25,7 +25,7 @@ RUN set -ex \
     && docker-php-ext-enable imagick \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-install -j$(nproc) zip pdo_mysql intl \
+    && docker-php-ext-install -j$(nproc) zip pdo_mysql intl opcache \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml \
@@ -35,6 +35,18 @@ RUN set -ex \
     && apt-get purge -y $PHPIZE_DEPS libmagickwand-dev \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
+
+# OPcache Configuration
+RUN { \
+    echo 'opcache.enable=1'; \
+    echo 'opcache.enable_cli=1'; \
+    echo 'opcache.memory_consumption=256'; \
+    echo 'opcache.interned_strings_buffer=16'; \
+    echo 'opcache.max_accelerated_files=20000'; \
+    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.save_comments=1'; \
+    echo 'opcache.fast_shutdown=1'; \
+    } > /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
