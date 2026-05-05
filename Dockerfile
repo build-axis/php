@@ -53,7 +53,7 @@ RUN groupadd -g "$GID" "$USER" && \
     useradd -u "$UID" -g "$USER" -m -s /bin/bash "$USER"
 
 
-RUN echo -e "* * * * * php cd /usr/share/nginx && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1\n" > /etc/cron.d/laravel-cron
+RUN echo "* * * * * php /bin/sh -c 'cd /usr/share/nginx && /usr/local/bin/php artisan schedule:run' >> /dev/null 2>&1" > /etc/cron.d/laravel-cron
 RUN chmod 0644 /etc/cron.d/laravel-cron
 
 RUN echo -e "[supervisord]\nnodaemon=true\nuser=root\n" > /etc/supervisord.conf && \
