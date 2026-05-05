@@ -52,7 +52,7 @@ ENV USER=php UID=1000 GID=1000
 RUN groupadd -g "$GID" "$USER" && \
     useradd -u "$UID" -g "$USER" -m -s /bin/bash "$USER"
 
-RUN echo "* * * * * root cd /usr/share/nginx && php artisan schedule:run >> /dev/null 2>&1" > /etc/cron.d/laravel-cron
+RUN echo -e "* * * * * root cd /usr/share/nginx && /usr/local/bin/php artisan schedule:run >> /dev/null 2>&1\n\n" > /etc/cron.d/laravel-cron
 
 RUN echo "[supervisord]\nnodaemon=true\nuser=root\n" > /etc/supervisord.conf && \
     echo "[program:php-fpm]\ncommand=php-fpm -F\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" >> /etc/supervisord.conf && \
