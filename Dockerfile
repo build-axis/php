@@ -1,51 +1,24 @@
 FROM php:8.4.8-fpm-alpine3.22
 
-RUN apk add --no-cache \
-    ghostscript \
-    imagemagick \
-    libpng \
-    libjpeg-turbo \
-    freetype \
-    libzip \
-    icu-libs \
-    openvpn \
-    supervisor \
-    curl \
-    bash
-
 RUN set -ex \
     && apk add --no-cache --virtual .build-deps \
         $PHPIZE_DEPS \
-        imagemagick-dev \
-        libtool \
-        libpng-dev \
-        libjpeg-turbo-dev \
-        freetype-dev \
-        libzip-dev \
-        icu-dev \
-    && pecl install imagick \
-    && docker-php-ext-enable imagick \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-install -j$(nproc) zip pdo_mysql intl \
+    && docker-php-ext-install -j$(nproc) pdo_mysql opcache \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && apk del .build-deps \
     && rm -rf /tmp/* /var/cache/apk/*
 
-COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
-
-ENV USER=php UID=1000 GID=1000
-RUN addgroup -S "$USER" --gid="$GID" && \
-    adduser -S -G "$USER" -u "$UID" -h "/home/php" -D "$USER"
-
-RUN echo '* * * * * cd /usr/share/nginx && php artisan schedule:run >> /dev/null 2>&1' > /etc/crontabs/www-data
-
-RUN mv /etc/supervisord.conf /etc/supervisord.conf.back && \
-    echo -e "[supervisord]\nnodaemon=true\nuser=root\n" > /etc/supervisord.conf && \
-    echo -e "[program:php-fpm]\ncommand=php-fpm -F\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" >> /etc/supervisord.conf && \
-    echo -e "[program:phpjob]\ncommand=php artisan queue:work --tries=1\nuser=php\nnumprocs=1\ndirectory=/usr/share/nginx\nautostart=true\nautorestart=true\nstdout_logfile=/dev/stdout\nstderr_logfile=/dev/stderr\n" >> /etc/supervisord.conf && \
-    echo -e "[program:crond]\ncommand=crond -f\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" >> /etc/supervisord.conf
+RUN { \
+    echo 'opcache.memory_consumption=256'; \
+    echo 'opcache.interned_strings_buffer=16'; \
+    echo 'opcache.max_accelerated_files=20000'; \
+    echo 'opcache.revalidate_freq=0'; \
+    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.fast_shutdown=1'; \
+    echo 'opcache.enable_cli=1'; \
+    } > /usr/local/etc/php/conf.d/opcache-optimized.ini
 
 WORKDIR "/usr/share/nginx"
-ENTRYPOINT ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+
+CMD ["php-fpm"]
