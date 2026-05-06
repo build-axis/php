@@ -1,13 +1,17 @@
-FROM php:8.4.8-fpm-alpine3.22
+# Stage 1: Build extensions
+FROM php:8.4.8-fpm-alpine3.22 AS builder
 
 RUN set -ex \
-    && apk add --no-cache --virtual .build-deps \
-        $PHPIZE_DEPS \
+    && apk add --no-cache $PHPIZE_DEPS \
     && docker-php-ext-install -j$(nproc) pdo_mysql opcache \
     && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apk del .build-deps \
-    && rm -rf /tmp/* /var/cache/apk/*
+    && docker-php-ext-enable redis
+
+# Stage 2: Final image
+FROM php:8.4.8-fpm-alpine3.22
+
+COPY --from=builder /usr/local/lib/php/extensions /usr/local/lib/php/extensions
+COPY --from=builder /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
 
 RUN { \
     echo 'opcache.memory_consumption=256'; \
@@ -19,6 +23,6 @@ RUN { \
     echo 'opcache.enable_cli=1'; \
     } > /usr/local/etc/php/conf.d/opcache-optimized.ini
 
-WORKDIR "/usr/share/nginx"
+WORKDIR /usr/share/nginx
 
 CMD ["php-fpm"]
