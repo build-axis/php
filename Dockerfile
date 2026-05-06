@@ -3,7 +3,7 @@ FROM php:8.4.8-fpm-alpine3.22 AS builder
 
 RUN set -ex \
     && apk add --no-cache $PHPIZE_DEPS \
-    && docker-php-ext-install -j$(nproc) pdo_mysql opcache \
+    && docker-php-ext-install -j$(nproc) pdo_mysql opcache pcntl \
     && pecl install redis \
     && docker-php-ext-enable redis
 
