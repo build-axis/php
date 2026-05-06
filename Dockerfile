@@ -23,6 +23,14 @@ RUN { \
     echo 'opcache.enable_cli=1'; \
     } > /usr/local/etc/php/conf.d/opcache-optimized.ini
 
+RUN set -ex \
+    && addgroup -g 1000 php \
+    && adduser -u 1000 -G php -s /bin/sh -D php \
+    && mkdir -p /etc/crontabs \
+    && echo "* * * * * /usr/local/bin/php /usr/share/nginx/artisan schedule:run >> /dev/stdout 2>&1" > /etc/crontabs/php \
+    && sed -i 's/user = www-data/user = php/g' /usr/local/etc/php-fpm.d/www.conf \
+    && sed -i 's/group = www-data/group = php/g' /usr/local/etc/php-fpm.d/www.conf
+
 WORKDIR /usr/share/nginx
 
 CMD ["php-fpm"]
