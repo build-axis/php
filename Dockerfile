@@ -10,12 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     libicu-dev \
     openvpn \
-    supervisor \
     curl \
     bash \
     liblcms2-2 \
     unzip \
-    cron \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -52,14 +50,8 @@ ENV USER=php UID=1000 GID=1000
 RUN groupadd -g "$GID" "$USER" && \
     useradd -u "$UID" -g "$USER" -m -s /bin/bash "$USER"
 
-
-RUN echo "* * * * * php /bin/sh -c 'cd /usr/share/nginx && /usr/local/bin/php artisan schedule:run' >> /dev/null 2>&1" > /etc/cron.d/laravel-cron
-RUN chmod 0644 /etc/cron.d/laravel-cron
-
-RUN echo -e "[supervisord]\nnodaemon=true\nuser=root\n" > /etc/supervisord.conf && \
-    echo -e "[program:php-fpm]\ncommand=php-fpm -F\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" >> /etc/supervisord.conf && \
-    echo -e "[program:phpjob]\ncommand=/usr/local/bin/php artisan queue:work --tries=1\nuser=php\nnumprocs=1\ndirectory=/usr/share/nginx\nautostart=true\nautorestart=true\nstdout_logfile=/dev/stdout\nstderr_logfile=/dev/stderr\n" >> /etc/supervisord.conf && \
-    echo -e "[program:cron]\ncommand=cron -f\nstdout_logfile=/dev/stdout\nstdout_logfile_maxbytes=0\nstderr_logfile=/dev/stderr\nstderr_logfile_maxbytes=0\nautorestart=true\n" >> /etc/supervisord.conf
-
 WORKDIR "/usr/share/nginx"
-ENTRYPOINT ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
+
+USER "$USER"
+
+CMD ["php-fpm"]
