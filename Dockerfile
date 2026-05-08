@@ -26,9 +26,8 @@ RUN { \
 RUN set -ex \
     && addgroup -g 1000 php \
     && adduser -u 1000 -G php -s /bin/sh -D php \
-    && addgroup php tty \
     && mkdir -p /etc/crontabs \
-    && echo "* * * * * cd /usr/share/nginx && php artisan schedule:run >> /dev/stdout 2>&1" > /etc/crontabs/php \
+    && echo "* * * * * cd /usr/share/nginx && php artisan schedule:run" > /etc/crontabs/php \
     && sed -i 's/user = www-data/user = php/g' /usr/local/etc/php-fpm.d/www.conf \
     && sed -i 's/group = www-data/group = php/g' /usr/local/etc/php-fpm.d/www.conf
 
