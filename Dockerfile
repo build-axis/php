@@ -42,7 +42,8 @@ RUN { \
     echo 'opcache.memory_consumption=256'; \
     echo 'opcache.interned_strings_buffer=16'; \
     echo 'opcache.max_accelerated_files=20000'; \
-    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.revalidate_freq=${PHP_OPCACHE_REVALIDATE_FREQ:-0}'; \
+    echo 'opcache.validate_timestamps=${PHP_OPCACHE_VALIDATE_TIMESTAMPS:-0}'; \
     echo 'opcache.save_comments=1'; \
     } >> /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
@@ -51,7 +52,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 ENV USER=php UID=1000 GID=1000
 RUN groupadd -g "$GID" "$USER" && \
     useradd -u "$UID" -g "$USER" -m -s /bin/bash "$USER"
-
 
 WORKDIR "/usr/share/nginx"
 
