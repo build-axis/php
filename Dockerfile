@@ -17,8 +17,8 @@ RUN { \
     echo 'opcache.memory_consumption=256'; \
     echo 'opcache.interned_strings_buffer=16'; \
     echo 'opcache.max_accelerated_files=20000'; \
-    echo 'opcache.revalidate_freq=0'; \
-    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.revalidate_freq=${PHP_OPCACHE_REVALIDATE_FREQ:-0}'; \
+    echo 'opcache.validate_timestamps=${PHP_OPCACHE_VALIDATE_TIMESTAMPS:-0}'; \
     echo 'opcache.fast_shutdown=1'; \
     echo 'opcache.enable_cli=1'; \
     } > /usr/local/etc/php/conf.d/opcache-optimized.ini
