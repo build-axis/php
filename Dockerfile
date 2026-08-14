@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     cron \
     vim \
+    openssh-client \
     git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
