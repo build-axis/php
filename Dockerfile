@@ -1,4 +1,4 @@
-FROM php:8.2.35-fpm-alpine3.18
+FROM php:8.2.7-fpm-alpine3.18
 
 RUN apk update; \
     apk upgrade;
