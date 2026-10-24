@@ -1,5 +1,5 @@
 # Stage 1: Build extensions
-FROM php:8.4.8-fpm-alpine3.22 AS builder
+FROM php:8.4.27-fpm-alpine AS builder
 
 RUN set -ex \
     && apk add --no-cache $PHPIZE_DEPS \
@@ -8,7 +8,7 @@ RUN set -ex \
     && docker-php-ext-enable redis
 
 # Stage 2: Final image
-FROM php:8.4.8-fpm-alpine3.22
+FROM php:8.4.27-fpm-alpine
 
 COPY --from=builder /usr/local/lib/php/extensions /usr/local/lib/php/extensions
 COPY --from=builder /usr/local/etc/php/conf.d /usr/local/etc/php/conf.d
