@@ -28,9 +28,11 @@ RUN set -ex \
     && docker-php-ext-enable imagick \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-install -j$(nproc) zip pdo_mysql intl opcache \
+    && docker-php-ext-install -j$(nproc) zip pdo_mysql intl opcache bcmath pcntl \
     && pecl install redis \
     && docker-php-ext-enable redis \
+    && pecl install pcov \
+    && docker-php-ext-enable pcov \
     && sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/g' /etc/ImageMagick-6/policy.xml \
     && sed -i 's/rights="none" pattern="CDR"/rights="read|write" pattern="CDR"/g' /etc/ImageMagick-6/policy.xml \
     && sed -i '/delegate.*decode="cdr"/d' /etc/ImageMagick-6/delegates.xml \
