@@ -1,5 +1,5 @@
 # Stage 1: Build extensions
-FROM php:8.4.8-fpm-alpine3.22 AS builder
+FROM php:8.4.27-fpm-alpine3.22 AS builder
 
 RUN set -ex \
     && apk add --no-cache $PHPIZE_DEPS \
